@@ -1,9 +1,13 @@
 import abc
-from typing import Set
-from books.adapters import orm
+from typing import Set, List
+# from books.adapters import orm
 from books.domain import model
 
-
+BOOKS = [
+    model.Book(**{'isbn': '1', 'name': 'book1', 'price': 14}),
+    model.Book(**{'isbn': '2', 'name': 'book2', 'price': 15.2}),
+    model.Book(**{'isbn': '3', 'name': 'book3', 'price': 24.99})
+]
 class AbstractRepository(abc.ABC):
     def __init__(self):
         self.seen = set()  # type: Set[model.Book]
@@ -18,22 +22,28 @@ class AbstractRepository(abc.ABC):
             self.seen.add(book)
         return book
 
+    def filter_by_isbn(self, isbns: List[str]) -> List[model.Book]:
+        books = self._filter_by_isbn(isbns)
+        for book in books:
+            self.seen.add(book)
+        return books
+
+    @abc.abstractmethod
+    def _filter_by_isbn(self, isbns: List[str]) -> List[model.Book]:
+        raise NotImplementedError
+
     @abc.abstractmethod
     def _add(self, book: model.Book):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def _get(self, sku) -> model.Book:
+    def _get(self, isbn) -> model.Book:
         raise NotImplementedError
 
 class MemoryRepository(AbstractRepository):
     def __init__(self):
         super().__init__()
-        self.books = [
-            model.Book(**{'isbn': '1', 'name': 'book1', 'price': 14}),
-            model.Book(**{'isbn': '2', 'name': 'book2', 'price': 15.2}),
-            model.Book(**{'isbn': '3', 'name': 'book3', 'price': 24.99})
-        ]
+        self.books = BOOKS
 
     def _add(self, book):
         self.books.append(book)
@@ -42,3 +52,10 @@ class MemoryRepository(AbstractRepository):
         for item in self.books:
             if item.isbn == isbn:
                 return item
+
+    def _filter_by_isbn(self, isbns: List[str]) -> List[model.Book]:
+        res = []
+        for item in self.books:
+            if item.isbn in isbns:
+                res.append(item)
+        return res

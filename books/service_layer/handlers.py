@@ -1,4 +1,5 @@
 from books.domain import commands, events, model
+from typing import List, Dict, Callable, Type, TYPE_CHECKING
 from . import unit_of_work
 
 class InvalidIsbn(Exception):
@@ -17,3 +18,21 @@ def add_book(
         book.create()
         uow.book_collection.add(book)
         uow.commit()
+
+def publish_book_added_event(
+    event: events.BookAdded,
+    publish: Callable,
+):
+    publish("book_added", event)
+
+EVENT_HANDLERS = {
+    # events.Allocated: [publish_allocated_event, add_allocation_to_read_model],
+    # events.Deallocated: [remove_allocation_from_read_model, reallocate],
+    events.BookAdded: [publish_book_added_event],
+}  # type: Dict[Type[events.Event], List[Callable]]
+
+COMMAND_HANDLERS = {
+    commands.AddBook: add_book,
+    # commands.CreateBatch: add_batch,
+    # commands.ChangeBatchQuantity: change_batch_quantity,
+}  # type: Dict[Type[commands.Command], Callable]

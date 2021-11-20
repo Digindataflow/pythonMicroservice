@@ -1,0 +1,75 @@
+version: "3"
+
+services:
+
+  redis_pubsub:
+    build:
+      context: .
+      dockerfile: ./books/Dockerfile
+    image: book-image
+    container_name: redis-pubsub
+    depends_on:
+      # - postgres
+      - redis
+      # - mailhog
+    environment:
+      - DB_HOST=postgres
+      - DB_PASSWORD=abc123
+      - REDIS_HOST=redis
+      - EMAIL_HOST=mailhog
+      - PYTHONDONTWRITEBYTECODE=1
+    volumes:
+      - ./books:/src/books
+    entrypoint:
+      - python
+      - -m
+      - books.redis_eventconsumer
+
+  books_api:
+    image: book-image
+    build:
+      context: .
+      dockerfile: ./books/Dockerfile
+      target: debug
+    depends_on:
+      - redis_pubsub
+      # - mailhog
+    environment:
+      - DB_HOST=postgres
+      - DB_PASSWORD=abc123
+      - API_HOST=0.0.0.0
+      - REDIS_HOST=redis
+      - EMAIL_HOST=mailhog
+      - PYTHONDONTWRITEBYTECODE=1
+      - FLASK_APP=books/app.py
+      - FLASK_DEBUG=1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./books:/src/books
+    entrypoint: [ "python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "-m", "books.app",  "--wait-for-client", "--multiprocess", "-m", "flask", "run", "-h", "0.0.0.0", "-p", "80" ]
+      # - flask
+      # - run
+      # - --host=0.0.0.0
+      # - --port=80
+    ports:
+      - "5005:80"
+      - 5678:5678
+
+  # postgres:
+  #   image: postgres:9.6
+  #   environment:
+  #     - POSTGRES_USER=allocation
+  #     - POSTGRES_PASSWORD=abc123
+  #   ports:
+  #     - "54321:5432"
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "63791:6379"
+
+  # mailhog:
+  #   image: mailhog/mailhog
+  #   ports:
+  #     - "11025:1025"
+  #     - "18025:8025"

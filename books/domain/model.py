@@ -4,7 +4,7 @@ from typing import Optional, List, Set
 from . import commands, events
 
 class Book:
-    def __init__(self, isbn: str, name: str, price: float, pub_date: Optional[date], version_number: int = 0):
+    def __init__(self, isbn: str, name: str, price: float, pub_date: Optional[date] = None, version_number: int = 0):
         self.isbn = isbn
         self.name = name
         self.price = price
@@ -19,6 +19,15 @@ class Book:
 
     def __hash__(self):
         return hash(self.isbn)
+
+    def as_dict(self):
+        return {
+            'isbn': self.isbn,
+            'name': self.name,
+            'price': self.price,
+            'pub_date': self.pub_date,
+            }
+
 
     def create(self):
         self.version_number += 1

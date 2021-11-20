@@ -1,24 +1,42 @@
 from flask import Flask
 from flask import request, jsonify, Response
+from datetime import datetime
+from books.domain import commands
+from books.service_layer.handlers import InvalidIsbn
+from books import bootstrap
+from books import views
+import os
 
 app = Flask(__name__)
-books = [
-    {'id': 1, 'name': 'book1'},
-    {'id': 2, 'name': 'book2'},
-    {'id': 3, 'name': 'book3'}
-]
+bus = bootstrap.bootstrap()
 
-@app.route("/books/", methods=['GET', 'POST'])
+@app.route("/books/", methods=['GET'])
 def book_list():
-    if request.method == 'GET':
-        book_ids = request.args.to_dict(flat=False).get('id')
-        book_ids = [int(item) for item in book_ids]
-        if book_ids:
-            items = [item for item in books if item['id'] in book_ids]
-        else:
-            items = books
-        return jsonify(items)
-    else:
-        book = request.get_json()
-        books.append(book)
-        return Response(status=201)
+    isbns = request.args.to_dict(flat=False).get('isbn')
+    result = views.books(isbns, bus.uow)
+    if not result:
+        return "not found", 404
+    return jsonify(result), 200
+
+
+@app.route("/books/", methods=["POST"])
+def add_book():
+    pub_date = request.json.get("pub_date")
+    if pub_date is not None:
+        pub_date = datetime.fromisoformat(pub_date).date()
+
+    try:
+        cmd = commands.AddBook(
+            request.json["isbn"], request.json["name"], request.json["price"], pub_date
+        )
+        bus.handle(cmd)
+    except InvalidIsbn as e:
+        return {"message": str(e)}, 400
+
+    return "OK", 201
+
+if __name__ == "__main__":
+    host = os.environ.get("API_HOST", "localhost")
+    port = 5005 if host == "localhost" else 80
+    print(host, port)
+    app.run(host=host, port=port, debug=True)
