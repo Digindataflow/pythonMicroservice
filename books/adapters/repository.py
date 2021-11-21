@@ -2,12 +2,14 @@ import abc
 from typing import Set, List
 # from books.adapters import orm
 from books.domain import model
+import datetime
 
 BOOKS = [
     model.Book(**{'isbn': '1', 'name': 'book1', 'price': 14}),
     model.Book(**{'isbn': '2', 'name': 'book2', 'price': 15.2}),
-    model.Book(**{'isbn': '3', 'name': 'book3', 'price': 24.99})
+    model.Book(**{'isbn': '3', 'name': 'book3', 'price': 24.99, 'pub_date': datetime.date(2019, 6, 12)})
 ]
+
 class AbstractRepository(abc.ABC):
     def __init__(self):
         self.seen = set()  # type: Set[model.Book]

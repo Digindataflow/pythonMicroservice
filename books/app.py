@@ -1,19 +1,30 @@
-from flask import Flask
-from flask import request, jsonify, Response
+import os
 from datetime import datetime
+
+from flask import Flask, Response, jsonify, request
+from prometheus_flask_exporter import PrometheusMetrics
+
+from books import bootstrap, views
 from books.domain import commands
 from books.service_layer.handlers import InvalidIsbn
-from books import bootstrap
-from books import views
-import os
 
 app = Flask(__name__)
 bus = bootstrap.bootstrap()
+metrics = PrometheusMetrics(app)
+metrics.info('app_info', 'books', version='1.0.0')
 
 @app.route("/books/", methods=['GET'])
 def book_list():
     isbns = request.args.to_dict(flat=False).get('isbn')
-    result = views.books(isbns, bus.uow)
+    result = views.books(None, bus.uow)
+    if not result:
+        return "not found", 404
+    return jsonify(result), 200
+
+
+@app.route("/books/<str:isbn>", methods=['GET'])
+def get_book(isbn: str):
+    result = views.books([isbn], bus.uow)
     if not result:
         return "not found", 404
     return jsonify(result), 200
