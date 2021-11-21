@@ -2,12 +2,12 @@ version: "3"
 
 services:
 
-  redis_pubsub:
+  books-redis-pubsub:
     build:
       context: .
       dockerfile: ./books/Dockerfile
     image: book-image
-    container_name: redis-pubsub
+    container_name: books-redis-pubsub
     depends_on:
       # - postgres
       - redis
@@ -25,14 +25,15 @@ services:
       - -m
       - books.redis_eventconsumer
 
-  books_api:
+  books-api:
     image: book-image
+    container_name: books-api
     build:
       context: .
       dockerfile: ./books/Dockerfile
       target: debug
     depends_on:
-      - redis_pubsub
+      - books-redis-pubsub
       # - mailhog
     environment:
       - DB_HOST=postgres
@@ -46,13 +47,13 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - ./books:/src/books
-    entrypoint: [ "python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "-m", "books.app",  "--wait-for-client", "--multiprocess", "-m", "flask", "run", "-h", "0.0.0.0", "-p", "80" ]
+    entrypoint: [ "python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "-m", "books.app",  "--wait-for-client", "--multiprocess", "-m", "flask", "run"]
       # - flask
       # - run
       # - --host=0.0.0.0
-      # - --port=80
+      # - --port=5000
     ports:
-      - "5005:80"
+      - "5000:5000"
       - 5678:5678
 
   # postgres:
@@ -73,3 +74,11 @@ services:
   #   ports:
   #     - "11025:1025"
   #     - "18025:8025"
+
+  prometheus:
+    image: prom/prometheus:latest
+    command: "--config.file=/etc/prometheus/prometheus.yml --web.listen-address '0.0.0.0:9090'"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./metrics/prometheus.yml:/etc/prometheus/prometheus.yml

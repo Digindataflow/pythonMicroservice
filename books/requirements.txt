@@ -2,3 +2,5 @@ sqlalchemy
 flask
 psycopg2-binary
 redis
+prometheus-client
+prometheus-flask-exporter

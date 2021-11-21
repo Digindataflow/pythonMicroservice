@@ -3,6 +3,9 @@ from datetime import datetime
 
 from flask import Flask, Response, jsonify, request
 from prometheus_flask_exporter import PrometheusMetrics
+from prometheus_client import make_wsgi_app
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from werkzeug.serving import run_simple
 
 from books import bootstrap, views
 from books.domain import commands
@@ -16,13 +19,13 @@ metrics.info('app_info', 'books', version='1.0.0')
 @app.route("/books/", methods=['GET'])
 def book_list():
     isbns = request.args.to_dict(flat=False).get('isbn')
-    result = views.books(None, bus.uow)
+    result = views.books(isbns, bus.uow)
     if not result:
         return "not found", 404
     return jsonify(result), 200
 
 
-@app.route("/books/<str:isbn>", methods=['GET'])
+@app.route("/books/<isbn>", methods=['GET'])
 def get_book(isbn: str):
     result = views.books([isbn], bus.uow)
     if not result:
@@ -47,7 +50,11 @@ def add_book():
     return "OK", 201
 
 if __name__ == "__main__":
-    host = os.environ.get("API_HOST", "localhost")
-    port = 5005 if host == "localhost" else 80
-    print(host, port)
-    app.run(host=host, port=port, debug=True)
+    from .config import get_api_url
+    host_port = get_api_url()
+    print(host_port)
+    # app.run(host_port.get("host"), host_port.get("port"), debug=True)
+    # Plug metrics WSGI app to your main app with dispatcher
+    dispatcher = DispatcherMiddleware(app.wsgi_app, {"/metrics": make_wsgi_app()})
+
+    run_simple(hostname=host_port.get("host"), port=host_port.get("port"), application=dispatcher)

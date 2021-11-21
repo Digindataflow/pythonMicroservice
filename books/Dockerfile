@@ -4,9 +4,8 @@ COPY ./books/requirements.txt /tmp/
 RUN pip install -r /tmp/requirements.txt
 
 RUN mkdir -p /src
-COPY books/ /src/books/
-
 WORKDIR /src
+# COPY books/ /src/books/
 
 FROM base as debug
 # Debug image reusing the base
