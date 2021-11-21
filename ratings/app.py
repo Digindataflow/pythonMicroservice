@@ -22,18 +22,9 @@ RequestsInstrumentor().instrument()
 
 tracer = trace.get_tracer(__name__)
 
-
-account_id = 1
-
-ratings = [
-    {'account_id': 1, 'rating': 5, 'book_id': 2},
-    {'account_id': 2, 'rating': 3, 'book_id': 2},
-    {'account_id': 1, 'rating': 1, 'book_id': 1}
-]
-
 @app.route("/ratings/", methods=['GET'])
 def rating_list():
-    account_rating = {item for item in ratings if item.get('account_id') == account_id}
+    account_id = 1
     with tracer.start_as_current_span("rating_list"):
         requests.get("/books/")
     return jsonify()
